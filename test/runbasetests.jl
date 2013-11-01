@@ -12,6 +12,9 @@ my_tests = [
 
 ]
 
+tic()
 for t in my_tests
   include(t)
 end
+t = toq()
+println("Finished in ", t, " seconds\n")

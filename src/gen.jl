@@ -48,12 +48,12 @@ type SeqGen <: Gen{Any}
   SeqGen(args...) = new(args)
 end
 
-gen(g::SeqGen) = begin
+gen(g::SeqGen, size = nothing) = begin
   vforg = randarg(g.seq...)
   if(typeof(vforg) == Function)
     vforg()
   elseif (typeof(vforg) == Gen)
-    gen(vforg)
+    gen(vforg, size)
   else
     vforg
   end
@@ -63,11 +63,14 @@ end
 randsign() = randarg(-1, 1)
 
 # Here is an example of how one can generate test data on a given boundary b.
-type BoundarySigned <: Gen{Signed}
+# It always have the values around the boundary in its sequence but can then 
+# also "jump" outside of this focused range with a Levy distribution (which has 
+# fat tails).
+type BoundarySignedGen <: Gen{Signed}
   b::Signed
   d
   subgen
-  BoundarySigned(b = 0, distr = Levy()) = begin
+  BoundarySignedGen(b = 0, distr = Levy()) = begin
     sg = SeqGen(b-2, b-1, b, b+1, b+2, 
       () -> b + randsign() * oftype(g.b, floor(rand(g.d))))
     new(b, distr, sg)
@@ -76,17 +79,38 @@ end
 
 gen(g) = gen(g.subgen)
 
+type SizedGen{T} <: Gen{Gen{T}}
+  size::Integer
+  subgen::Gen{T}
+end
 
-# Inspirational code from QuickCheck.jl:
+sized(gen, size = 10) = SizedGen(size, gen)
+gen{T}(g::SizedGen{T}, size) = gen(g.subgen, min(size, g.size))
+
+# A data gen just wraps a Julia type into a generator.
+#type DataGen{T} < Gen{T}
+#  typ::T
+#  DataGen(::Type{T}) = new(T)
+#end
+#gen{T}(dg::DataGen{T}, size = 10) = gen(dg.typ, size)
+
+# A TestGenProcess is the collective generation of a set of values in order to use
+# them for testing.
+# abstract TestGenProcess
+
+#####################################################################
+# (Based on) QuickCheck.jl's generators for the base types
+#####################################################################
+
 # Default generators for primitive types
-#gen{T<:Unsigned}(::Type{T}, size) = convert(T, rand(1:size))
-#gen{T<:Signed}(::Type{T}, size) = convert(T, rand(-size:size))
-#gen{T<:FloatingPoint}(::Type{T}, size) = convert(T, (rand()-0.5).*size)
+gen{T<:Unsigned}(::Type{T}, size = 10) = convert(T, rand(1:size))
+gen{T<:Signed}(::Type{T}, size = 10) = convert(T, rand(-size:size))
+gen{T<:FloatingPoint}(::Type{T}, size = 10) = convert(T, (rand()-0.5).*size)
 # This won't generate interesting UTF-8, but doing that is a Hard Problem
-#gen{T<:String}(::Type{T}, size) = convert(T, randstring(size))
+gen{T<:String}(::Type{T}, size = 10) = convert(T, randstring(size))
 
 # Generator for array's
-#function gen{T,n}(::Type{Array{T,n}}, size)
-#  dims = [rand(1:size) for i in 1:n]
-#  reshape([generator(T, size) for x in 1:prod(dims)], dims...)
-#end
+function gen{T,n}(::Type{Array{T,n}}, size = 10)
+  dims = [rand(1:size) for i in 1:n]
+  reshape([gen(T, size) for x in 1:prod(dims)], dims...)
+end
