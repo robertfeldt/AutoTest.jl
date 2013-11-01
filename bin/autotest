@@ -1,0 +1,4 @@
+#!/usr/bin/env julia
+
+# This is the test runner. Invoke it either with a test file or empty (no args).
+# In the latter case it will search for a test dir and run all tests in there...
