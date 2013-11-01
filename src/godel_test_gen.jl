@@ -31,8 +31,8 @@ macro g(desc, body)
 end
 
 @g "SeqOfExprGen" begin
-  start() = join(plus(expression()))
-  expression() = "1"
+  start()       = join(plus(expression()))
+  expression()  = "1"
 end
 
 # This is the example from our ISSRE paper:

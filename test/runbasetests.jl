@@ -9,6 +9,7 @@ using FactCheck
 my_tests = [
 
   "test_gen.jl",
+  "test_runner.jl",
 
 ]
 
@@ -16,5 +17,4 @@ tic()
 for t in my_tests
   include(t)
 end
-t = toq()
-println("Finished in ", t, " seconds\n")
+println("Finished in ", @sprintf("%.3f", toq()), " seconds\n")

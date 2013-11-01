@@ -1,46 +1,67 @@
-module AutoTest
-
-export spec
-
-type Spec
-  level::Int64
+# A test suite is a related set of test cases / checks. A TestSuiteExecution 
+# collects information about test execution for such a suite together. It supports
+# hierarchies of executions so that test executions can be nested within
+# each other but still reported on collectively. The general design used is
+# that when everything passes things are just reported on the top level; only
+# when there is a failure is the hierarchy used to give more information.
+type TestSuiteExecution
+  level::Int64 # Level in the hierarchy. Is 0 at the top level and then increases by one per level.
   description::ASCIIString
-  parent::Union(Nothing, Spec)
   children
   num_pass::Int64
   num_fail::Int64
-  next_column::Int64 # Next column to print progress in
+  next_column::Int64 # Next column to print progress in.
+  start_time
 
-  Spec(desc, level = 0, parent = nothing) = new(level, desc, parent, Any[], 0, 0, level)
+  TestSuiteExecution(desc, level = 0) = new(level, desc, Any[], 0, 0, level, time())
 end
 
-CurrentSpec = TopSpec = Spec("<top>")
+CurrentExec = TopExec = TestSuiteExecution("<top>")
+VerbosityLevel = 1
+
+set_verbosity!(newLevel) = VerbosityLevel = newLevel
+
+# Print at verbosity level.
+printav(level, args...) = begin
+  if level < VerbosityLevel
+    print(args...)
+  end
+end
 
 num_pass(x) = 0
 num_fail(x) = 0
-num_pass(s::Spec) = s.num_pass + sum([num_pass(c) for c in s.children])
-num_fail(s::Spec) = s.num_fail + sum([num_fail(c) for c in s.children])
+num_pass(s::TestSuiteExecution) = s.num_pass + sum([num_pass(c) for c in s.children])
+num_fail(s::TestSuiteExecution) = s.num_fail + sum([num_fail(c) for c in s.children])
 
-function spec(body, description = "")
-  global CurrentSpec
-  global TopSpec
-  new_spec = Spec(description, CurrentSpec.level+1, CurrentSpec)  
-  push!(CurrentSpec.children, new_spec)
-  old_spec = CurrentSpec
-  CurrentSpec = new_spec
-  leading = reps("-", old_spec.level)
-  print("\n", leading, description, ":\n", reps(" ", old_spec.level))
+set_current_execution(body, tse::TestSuiteExecution) = begin
+  old = AutoTest.CurrentExec
+  global CurrentExec
+  CurrentExec = tse
   body()
-  CurrentSpec = old_spec
+  CurrentExec = old
 end
 
-function report_assertions()
-  if CurrentSpec == TopSpec
-    # Back at the top-level so print info about the number of pass and fail
-    np = num_pass(CurrentSpec)
-    nf = num_fail(CurrentSpec)
-    println("\n\n", np+nf, " asserts, ", np, " passed, ", nf, " failed\n")
+# Note that the reference to the global var CurrentExec makes this 
+# hard/unparallelizable??! Investigate better approaches.
+function suite(body, description = "")
+  old_tse = AutoTest.CurrentExec
+  new_tse = TestSuiteExecution(description, old_tse.level+1)  
+  push!(old_tse.children, new_tse)
+  leading = reps("-", old_tse.level)
+  printav(2, "\n", leading, description, "\n", reps(" ", old_tse.level))
+  set_current_execution(new_tse) do
+    body()
   end
+end
+
+test_suite_report(tse = AutoTest.CurrentExec) = begin
+  (num_pass(tse), num_fail(tse), time() - tse.start_time)
+end
+
+function report_assertions(tse = AutoTest.CurrentExec)
+  np, nf, t = test_suite_report(tse)
+  printav(1, "\n\nFinished in ", @sprintf("%.3f seconds", t))
+  printav(1, "\n", np+nf, " asserts, ", np, " passed, ", nf, " failed.\n")
 end
 
 function reps(str, len)
@@ -48,109 +69,33 @@ function reps(str, len)
 end
 
 function mark_progress(char)
-  if CurrentSpec.next_column == 78
-    CurrentSpec.next_column = 0
-    print(reps(" ", CurrentSpec.level))
+  if CurrentExec.next_column == 78
+    CurrentExec.next_column = 0
+    printav(2, reps(" ", CurrentExec.level))
   end
-  print(char)
-  CurrentSpec.next_column += 1
+  printav(2, char)
+  CurrentExec.next_column += 1
 end
 
 function log_outcome(outcome)
-  global CurrentSpec
   if outcome == true
-    CurrentSpec.num_pass += 1
+    AutoTest.CurrentExec.num_pass += 1
     mark_progress(".")
   else
-    CurrentSpec.num_fail += 1
+    AutoTest.CurrentExec.num_fail += 1
     mark_progress("F")
   end
 end
 
-macro pp(ex)
+macro a(ex)
   quote
-    print($(string(ex)), " = ")
-    show($(ex))
-    println("")
-  end
-end
-
-macro assert(ex)
-  quote
-    global CurrentSpec
-    if $ex
+    if $(esc(ex))
       log_outcome(true)
       nothing
     else
       log_outcome(false)
-      print("\n", reps(" ", CurrentSpec.level-1), "Assertion failed: ", $(string(ex)), "\n", reps(" ", CurrentSpec.level-1))
+      sp = reps(" ", AutoTest.CurrentExec.level-1)
+      printav(1, "\n", sp, "Assertion failed: ", $(string(ex)), "\n", sp)
     end
   end
 end
-
-# A DataGenMapper maps regexp's to generator calls. All the regexp's that match
-# a data gen spec are valid for it. One of them is randomly selected and the
-# func it maps to is called to generate a data which is fed to the variable
-# name given in the data gen spec.
-type GenFromStringSpec
-  map
-  GenFromStringSpec() = new({})
-end
-
-StringSpecGen = GenFromStringSpec()
-
-function reg(regexp, genfunc)
-  global StringSpecGen
-  StringSpecGen.map[regexp] = genfunc
-end
-
-function lookup(dataspec)
-  global StringSpecGen
-  res = Any[]
-  for(regexp in keys(StringSpecGen))
-    var = match(regexp, dataspec)
-    if (var)
-      push!(res, (var, StringSpecGen[regexp]))
-    end
-  end
-  if (length(res) > 0)
-    return res[rand(1:length(res))]
-  else
-    return false, (size) -> nothing
-  end
-end
-
-#macro given(body, dataspecs)
-#  quote
-#    for(dspec in ($dataspecs))
-#    end
-#  end
-#end
-
-end
-
-using AutoTest
-
-# Now lets test it:
-spec("A") do
-  @assert true
-  spec("B") do
-    @assert true
-    @assert true
-    a = 1
-    @assert a == 2
-    @assert true
-    @assert true
-    spec("C") do
-      @assert true
-      k = false
-      @assert k != false
-    end
-  end
-end
-
-spec("A2") do
-  @assert true
-end
-
-report_assertions()
