@@ -1,3 +1,13 @@
+# There is always a set of tags that determines which tests are executed.
+# By adding/deleting tags a user can have control over which tests to run.
+CurrentRunTags = Set(:normal)
+
+# Set which test tags should currently be included when running tests.
+run_only_tags!(tags...) = begin
+  global CurrentRunTags
+  CurrentRunTags = Set(tags...)
+end
+
 # A test suite is a related set of test cases / checks. A TestSuiteExecution 
 # collects information about test execution for such a suite together. It supports
 # hierarchies of executions so that test executions can be nested within
@@ -10,10 +20,14 @@ type TestSuiteExecution
   children
   num_pass::Int64
   num_fail::Int64
+  num_error::Int64  
   next_column::Int64 # Next column to print progress in.
   start_time
+  tags
 
-  TestSuiteExecution(desc, level = 0) = new(level, desc, Any[], 0, 0, level, time())
+  TestSuiteExecution(desc, level = 0, tags = Set(:normal)) = begin
+    new(level, desc, Any[], 0, 0, 0, level, time(), tags)
+  end
 end
 
 CurrentExec = TopExec = TestSuiteExecution("<top>")
@@ -28,40 +42,67 @@ printav(level, args...) = begin
   end
 end
 
-num_pass(x) = 0
-num_fail(x) = 0
-num_pass(s::TestSuiteExecution) = s.num_pass + sum([num_pass(c) for c in s.children])
-num_fail(s::TestSuiteExecution) = s.num_fail + sum([num_fail(c) for c in s.children])
+num_pass(s) = 0
+num_fail(s) = 0
+num_error(s) = 0
+num_pass(s::TestSuiteExecution = AutoTest.CurrentExec) = s.num_pass + sum([num_pass(c) for c in s.children])
+num_fail(s::TestSuiteExecution = AutoTest.CurrentExec) = s.num_fail + sum([num_fail(c) for c in s.children])
+num_error(s::TestSuiteExecution = AutoTest.CurrentExec) = s.num_error + sum([num_error(c) for c in s.children])
+num_checks(s::TestSuiteExecution = AutoTest.CurrentExec) = num_pass(s) + num_fail(s) + num_error(s)
 
-set_current_execution(body, tse::TestSuiteExecution) = begin
-  old = AutoTest.CurrentExec
+# Traverse the tree of tests and callback on each one.
+each_test(callback, tse = AutoTest.CurrentExec) = begin
+  callback(tse)
+  for(t in tse.children)
+    each_test(callback, t)
+  end
+end
+
+# We only count tests that has been run and that contains at least one
+# assert/check, the other ones are used for hierarchy/organisation/reporting.
+num_tests(s::TestSuiteExecution = AutoTest.CurrentExec) = begin
+  count = 0
+  count_if_has_checks(tse) = (num_checks(tse) > 0) ? (count += 1) : 0
+  each_test(count_if_has_checks)
+  count - 1 # Subtract one since we should not include <top>, which we created
+end
+
+set_current_execution!(body, tse::TestSuiteExecution) = begin
   global CurrentExec
-  CurrentExec = tse
+  old, CurrentExec = CurrentExec, tse
   body()
   CurrentExec = old
 end
 
+# True iff the given TSE should be executed.
+should_run(tse) = length(intersect(tse.tags, AutoTest.CurrentRunTags)) > 0
+
 # Note that the reference to the global var CurrentExec makes this 
 # hard/unparallelizable??! Investigate better approaches.
-function suite(body, description = "")
+function test(body, description = "", tags...)
   old_tse = AutoTest.CurrentExec
-  new_tse = TestSuiteExecution(description, old_tse.level+1)  
+  tags = Set(tags...)
+  push!(tags, :normal) # All tests are always tagged :normal
+  new_tse = TestSuiteExecution(description, old_tse.level+1, tags)
   push!(old_tse.children, new_tse)
   leading = reps("-", old_tse.level)
   printav(2, "\n", leading, description, "\n", reps(" ", old_tse.level))
-  set_current_execution(new_tse) do
-    body()
+  if should_run(new_tse)
+    set_current_execution!(new_tse) do
+      body()
+    end
   end
 end
 
 test_suite_report(tse = AutoTest.CurrentExec) = begin
-  (num_pass(tse), num_fail(tse), time() - tse.start_time)
+  (num_tests(), num_pass(tse), num_fail(tse), num_error(tse), time() - tse.start_time)
 end
 
 function report_assertions(tse = AutoTest.CurrentExec)
-  np, nf, t = test_suite_report(tse)
+  nt, np, nf, ne, t = test_suite_report(tse)
   printav(1, "\n\nFinished in ", @sprintf("%.3f seconds", t))
-  printav(1, "\n", np+nf, " asserts, ", np, " passed, ", nf, " failed.\n")
+  printav(1, "\n", nt, " tests, ", np+nf+ne, " asserts, ", 
+    np, " passed, ", nf, " failed, ", ne, " errors.\n")
 end
 
 function reps(str, len)
@@ -77,25 +118,35 @@ function mark_progress(char)
   CurrentExec.next_column += 1
 end
 
-function log_outcome(outcome)
-  if outcome == true
+function log_outcome(outcome, error = nothing)
+  if outcome == :pass
     AutoTest.CurrentExec.num_pass += 1
     mark_progress(".")
-  else
+  elseif outcome == :fail
     AutoTest.CurrentExec.num_fail += 1
     mark_progress("F")
+  elseif outcome == :error
+    AutoTest.CurrentExec.num_error += 1
+    mark_progress("E")
   end
 end
 
-macro a(ex)
+# Macro that checks if something is true (a pass), false (a fail) or if an
+# error/exception (an error) was thrown.
+macro t(ex)
   quote
-    if $(esc(ex))
-      log_outcome(true)
-      nothing
-    else
-      log_outcome(false)
-      sp = reps(" ", AutoTest.CurrentExec.level-1)
-      printav(1, "\n", sp, "Assertion failed: ", $(string(ex)), "\n", sp)
+    try
+      res = $(esc(ex))
+      if res
+        log_outcome(:pass)
+        nothing
+      else
+        log_outcome(:fail)
+        sp = reps(" ", AutoTest.CurrentExec.level-1)
+        printav(1, "\n", sp, "Assertion failed: ", $(string(ex)), "\n", sp)
+      end
+    catch e
+      log_outcome(:error, e)
     end
   end
 end

@@ -1,9 +1,9 @@
 module AutoTest
 
-export gen, suite, @a
+export test, @t, gen
 
+include("runner.jl")
 include("gen.jl")
 #include("godel_test_gen.jl")
-include("runner.jl")
 
 end

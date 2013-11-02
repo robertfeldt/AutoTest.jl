@@ -5,71 +5,77 @@ facts("TestSuiteExecution") do
 
   top = AutoTest.CurrentExec
 
-  @fact AutoTest.test_suite_report()[1] => 0
-  @fact AutoTest.test_suite_report()[2] => 0
+  @fact AutoTest.num_pass() => 0
+  @fact AutoTest.num_fail() => 0
+  @fact AutoTest.num_error() => 0
 
-  suite("A") do
+  test("A") do
 
     @fact top != AutoTest.CurrentExec => true
 
-    @fact AutoTest.test_suite_report()[1] => 0
-    @fact AutoTest.test_suite_report()[2] => 0
-    @a true
-    @fact AutoTest.test_suite_report()[1] => 1
-    @fact AutoTest.test_suite_report()[2] => 0
+    @fact AutoTest.num_pass() => 0
+    @fact AutoTest.num_fail() => 0
+    @fact AutoTest.num_error() => 0
+
+    @t true
+
+    @fact AutoTest.num_pass() => 1
+    @fact AutoTest.num_fail() => 0
+    @fact AutoTest.num_error() => 0
 
     a = 1
+    @t a == 1
 
-    @a a == 1
-    @fact AutoTest.test_suite_report()[1] => 2
-    @fact AutoTest.test_suite_report()[2] => 0
+    @fact AutoTest.num_pass() => 2
+    @fact AutoTest.num_fail() => 0
+    @fact AutoTest.num_error() => 0
 
-    @a a == 2
-    @fact AutoTest.test_suite_report()[1] => 2
-    @fact AutoTest.test_suite_report()[2] => 1
+    @t a == 2
 
-    suite("B") do
+    @fact AutoTest.num_pass() => 2
+    @fact AutoTest.num_fail() => 1
+    @fact AutoTest.num_error() => 0
 
-      @fact AutoTest.test_suite_report()[1] => 0
-      @fact AutoTest.test_suite_report()[2] => 0
+    test("B") do
 
-      @a false
-      @fact AutoTest.test_suite_report()[1] => 0
-      @fact AutoTest.test_suite_report()[2] => 1
+      @fact AutoTest.num_pass() => 0
+      @fact AutoTest.num_fail() => 0
+      @fact AutoTest.num_error() => 0
 
-      @a true
-      @fact AutoTest.test_suite_report()[1] => 1
-      @fact AutoTest.test_suite_report()[2] => 1
+      @t false
+
+      @fact AutoTest.num_pass() => 0
+      @fact AutoTest.num_fail() => 1
+      @fact AutoTest.num_error() => 0
+
+      @t true
+
+      @fact AutoTest.num_pass() => 1
+      @fact AutoTest.num_fail() => 1
+      @fact AutoTest.num_error() => 0
 
     end
 
   end
 
-  r = AutoTest.test_suite_report()
+  ntest, npass, nfail, nerr = AutoTest.test_suite_report()
 
-  @fact r[1] => 3
-  @fact r[2] => 2
+  @fact npass => 3
+  @fact nfail => 2
+  @fact nerr => 0
+  @fact ntest => 2
+
+  AutoTest.run_only_tags!(:normal, :quick)
+  test("C", :normal) do
+    @t true
+    @t false
+  end
+
+  ntest, npass, nfail, nerr = AutoTest.test_suite_report()
+
+  @fact npass => 4
+  @fact nfail => 3
+  @fact nerr => 0
+  @fact ntest => 3
 
 end
-
-#suite("A") do
-#  suite("B") do
-#    @a true
-#    @a true
-#    a = 1
-#    @a a == 2
-#    @a true
-#    @a true
-#    suite("C") do
-#      @a true
-#      k = false
-#      @a k != false
-#    end
-#  end
-#end
-#
-#suite("A2") do
-#  @assert true
-#end
-#
-#AutoTest.report_assertions()

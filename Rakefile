@@ -20,11 +20,11 @@ task :runslowtest do
   runtestfile "test/runslowtests.jl"
 end
 
-task :runalltest => [:runbasetest, :runtest, :runslowtest]
-
-task :compare_optimizers do
-  sh "julia -L #{MainFile} test/compare_optimizers.jl"
+task :runselftest do
+  runtestfile "test/selftest/runtests.jl"
 end
+
+task :runalltest => [:runbasetest, :runtest, :runslowtest, :runselftest]
 
 def filter_latest_changed_files(filenames, numLatestChangedToInclude = 1)
   filenames.sort_by{ |f| File.mtime(f) }[-numLatestChangedToInclude, numLatestChangedToInclude]
