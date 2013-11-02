@@ -207,7 +207,7 @@ macro t(ex)
   end
 end
 
-# Macro to check that exceptions are thrown.
+# Macro to check that exceptions are thrown. a
 macro throws(ex)
   quote
     try

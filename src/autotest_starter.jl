@@ -50,7 +50,7 @@ log_test_execution_stats(testDir, data) = begin
     mkdir(logdir)
     test_exec_logfile = create_test_execution_log(logdir)
   else
-    test_exec_logfile = test_execution_log_filename(logDir)
+    test_exec_logfile = test_execution_log_filename(logdir)
   end
 
   # Now append the data
@@ -62,20 +62,16 @@ run_all_tests_and_log_stats(testDir, log_test_executions = true;
   regexpThatShouldMatchTestFiles = r"^test.*\.jl") = begin
 
   st = time()
-  run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles)
-
-  stats = AutoTest.report_assertions(AutoTest.TopExec)
+  te, stats = run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles)
 
   if log_test_executions
-    println("Logging test exec stats.")
+    #println("Logging test exec stats.")
 
     # We use short keys since we want to keep the size of the json file down
     if changed_file != false
-      stats["cf"] = join([fileChangeDir, "/", filename]) # Changed file
+      stats["cf"] = changed_file # Changed file
     end
     stats["st"] = strftime("%F %X", st) # Start time
-
-    show(stats)
 
     # Now log to file.
     log_test_execution_stats(testDir, stats)
@@ -90,16 +86,15 @@ start_autotesting(srcDir = "src", testDir = "test";
   create_callback(fileChangeDir) = begin
     (filename, events, status) -> begin
       if in(file_ending(filename), fileendings)
-        println("Source file ", filename, " changed. Rerunning tests.")
+        println("File ", filename, " changed. Rerunning tests.")
+        run_all_tests_and_log_stats(testDir, log_test_executions; 
+          changed_file = join([fileChangeDir, "/", filename]))
       end
-      run_all_tests_and_log_stats(testDir, log_test_executions; 
-        changed_file = filename)
     end
   end
 
   # Run the tests once to ensure the tests have been loaded.
   run_all_tests_and_log_stats(testDir, log_test_executions;
-   load_all_tests = true, 
    regexpThatShouldMatchTestFiles = regexpThatShouldMatchTestFiles)
 
   # Now install the file watchers and sit back and let the autotesting begin... :)
