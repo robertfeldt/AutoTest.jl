@@ -9,7 +9,7 @@ facts("TestSuiteExecution") do
   @fact AutoTest.num_fail() => 0
   @fact AutoTest.num_error() => 0
 
-  test("A") do
+  ta = test("A") do
 
     @fact top != AutoTest.CurrentExec => true
 
@@ -36,7 +36,7 @@ facts("TestSuiteExecution") do
     @fact AutoTest.num_fail() => 1
     @fact AutoTest.num_error() => 0
 
-    test("B") do
+    tb = test("B") do
 
       @fact AutoTest.num_pass() => 0
       @fact AutoTest.num_fail() => 0
@@ -56,7 +56,11 @@ facts("TestSuiteExecution") do
 
     end
 
+    @fact tb.tags == Set() => true
+
   end
+
+  @fact ta.tags == Set() => true
 
   ntest, npass, nfail, nerr = AutoTest.test_suite_report()
 
@@ -65,17 +69,47 @@ facts("TestSuiteExecution") do
   @fact nerr => 0
   @fact ntest => 2
 
-  AutoTest.run_only_tags!(:normal, :quick)
-  test("C", :normal) do
+  AutoTest.run_only_tags!(:test, :quick)
+  tc = test("C", :test) do
     @t true
     @t false
   end
 
-  ntest, npass, nfail, nerr = AutoTest.test_suite_report()
+  @fact tc.tags == Set(:test) => true
 
+  ntest, npass, nfail, nerr = AutoTest.test_suite_report()
   @fact npass => 4
   @fact nfail => 3
   @fact nerr => 0
   @fact ntest => 3
+
+  # This one should not be executed...
+  td = test("D", :slow) do
+    @t true
+    @t false
+  end
+
+  @fact td.tags == Set(:slow) => true
+
+  ntest, npass, nfail, nerr = AutoTest.test_suite_report()
+  @fact npass => 4
+  @fact nfail => 3
+  @fact nerr => 0
+  @fact ntest => 3
+
+  # But if we add also the slow tag the tests tagged with slow are also executed.
+  AutoTest.run_only_tags!(:test, :quick, :slow)
+  te = test("E", :slow) do
+    @t true
+    @t false
+  end
+
+  @fact td.tags == Set(:slow) => true
+
+  ntest, npass, nfail, nerr = AutoTest.test_suite_report()
+  @fact npass => 5
+  @fact nfail => 4
+  @fact nerr => 0
+  @fact ntest => 4
 
 end

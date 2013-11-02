@@ -1,6 +1,6 @@
 # There is always a set of tags that determines which tests are executed.
 # By adding/deleting tags a user can have control over which tests to run.
-CurrentRunTags = Set(:normal)
+CurrentRunTags = Set(:test)
 
 # Set which test tags should currently be included when running tests.
 run_only_tags!(tags...) = begin
@@ -25,7 +25,7 @@ type TestSuiteExecution
   start_time
   tags
 
-  TestSuiteExecution(desc, level = 0, tags = Set(:normal)) = begin
+  TestSuiteExecution(desc, level = 0, tags = Set()) = begin
     new(level, desc, Any[], 0, 0, 0, level, time(), tags)
   end
 end
@@ -74,16 +74,16 @@ set_current_execution!(body, tse::TestSuiteExecution) = begin
   CurrentExec = old
 end
 
-# True iff the given TSE should be executed.
-should_run(tse) = length(intersect(tse.tags, AutoTest.CurrentRunTags)) > 0
+# True iff the given TSE should be executed. It should always be executed if
+# it is only tagged with :test, otherwise only if it has any of the tags
+# that are currently selected.
+should_run(tse) = length(tse.tags) == 0 || length(intersect(tse.tags, AutoTest.CurrentRunTags)) > 0
 
 # Note that the reference to the global var CurrentExec makes this 
 # hard/unparallelizable??! Investigate better approaches.
 function test(body, description = "", tags...)
   old_tse = AutoTest.CurrentExec
-  tags = Set(tags...)
-  push!(tags, :normal) # All tests are always tagged :normal
-  new_tse = TestSuiteExecution(description, old_tse.level+1, tags)
+  new_tse = TestSuiteExecution(description, old_tse.level+1, Set(tags...))
   push!(old_tse.children, new_tse)
   leading = reps("-", old_tse.level)
   printav(2, "\n", leading, description, "\n", reps(" ", old_tse.level))
@@ -92,6 +92,7 @@ function test(body, description = "", tags...)
       body()
     end
   end
+  new_tse
 end
 
 test_suite_report(tse = AutoTest.CurrentExec) = begin
