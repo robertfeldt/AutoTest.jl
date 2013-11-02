@@ -54,6 +54,22 @@ facts("TestSuiteExecution") do
       @fact AutoTest.num_fail() => 1
       @fact AutoTest.num_error() => 0
 
+      @t begin
+        throw(ArgumentError("dummy"))
+      end
+
+      @fact AutoTest.num_pass() => 1
+      @fact AutoTest.num_fail() => 1
+      @fact AutoTest.num_error() => 1
+
+      @throws begin
+        throw(ArgumentError("dummy"))
+      end
+
+      @fact AutoTest.num_pass() => 2
+      @fact AutoTest.num_fail() => 1
+      @fact AutoTest.num_error() => 1
+
     end
 
     @fact tb.tags == Set() => true
@@ -64,9 +80,9 @@ facts("TestSuiteExecution") do
 
   ntest, npass, nfail, nerr = AutoTest.test_suite_report()
 
-  @fact npass => 3
+  @fact npass => 4
   @fact nfail => 2
-  @fact nerr => 0
+  @fact nerr => 1
   @fact ntest => 2
 
   AutoTest.run_only_tags!(:test, :quick)
@@ -78,9 +94,9 @@ facts("TestSuiteExecution") do
   @fact tc.tags == Set(:test) => true
 
   ntest, npass, nfail, nerr = AutoTest.test_suite_report()
-  @fact npass => 4
+  @fact npass => 5
   @fact nfail => 3
-  @fact nerr => 0
+  @fact nerr => 1
   @fact ntest => 3
 
   # This one should not be executed...
@@ -92,9 +108,9 @@ facts("TestSuiteExecution") do
   @fact td.tags == Set(:slow) => true
 
   ntest, npass, nfail, nerr = AutoTest.test_suite_report()
-  @fact npass => 4
+  @fact npass => 5
   @fact nfail => 3
-  @fact nerr => 0
+  @fact nerr => 1
   @fact ntest => 3
 
   # But if we add also the slow tag the tests tagged with slow are also executed.
@@ -107,9 +123,9 @@ facts("TestSuiteExecution") do
   @fact td.tags == Set(:slow) => true
 
   ntest, npass, nfail, nerr = AutoTest.test_suite_report()
-  @fact npass => 5
+  @fact npass => 6
   @fact nfail => 4
-  @fact nerr => 0
+  @fact nerr => 1
   @fact ntest => 4
 
 end

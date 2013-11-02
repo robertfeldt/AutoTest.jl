@@ -1,6 +1,6 @@
 module AutoTest
 
-export test, @t, gen
+export test, @t, @throws, gen
 
 include("runner.jl")
 include("gen.jl")

@@ -151,3 +151,24 @@ macro t(ex)
     end
   end
 end
+
+macro throws(ex)
+  quote
+    try
+      res = $(esc(ex))
+      if res
+        log_outcome(:fail)
+        sp = reps(" ", AutoTest.CurrentExec.level-1)
+        printav(1, "\n", sp, "Assertion failed: No exception was thrown", $(string(ex)), "\n", sp)
+      end
+    catch e
+      #if typeof(e) == $error
+        log_outcome(:pass)
+      #else
+      #  log_outcome(:fail)
+      #  sp = reps(" ", AutoTest.CurrentExec.level-1)
+      #  printav(1, "\n", sp, "Assertion failed: an exception was thrown but not the right one", $(string(ex)), "\n", sp)
+      #end
+    end
+  end
+end
