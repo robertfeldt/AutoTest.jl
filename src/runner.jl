@@ -18,6 +18,7 @@ type TestSuiteExecution
   level::Int64 # Level in the hierarchy. Is 0 at the top level and then increases by one per level.
   description::ASCIIString
   children
+  body
   num_pass::Int64
   num_fail::Int64
   num_error::Int64  
@@ -25,14 +26,31 @@ type TestSuiteExecution
   start_time
   tags
 
-  TestSuiteExecution(desc, level = 0, tags = Set()) = begin
-    new(level, desc, Any[], 0, 0, 0, level, time(), tags)
+  TestSuiteExecution(desc, body::Function, level = 0, tags = Set()) = begin
+    new(level, desc, Any[], body, 0, 0, 0, level, time(), tags)
   end
 end
 
-CurrentExec = TopExec = TestSuiteExecution("<top>")
-VerbosityLevel = 1
+CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
 
+clear_statistics_for_new_execution(tse::TestSuiteExecution) = begin
+  clear_tse(tse) = begin
+    tse.num_pass = tse.num_fail = tse.num_error = 0
+  end
+  # Clear for the given one and all its children
+  each_test(clear_tse, tse)
+end
+
+# Note that the reference to the global var CurrentExec makes this 
+# hard/unparallelizable??! Investigate better approaches.
+function test(body, description = "", tags...)
+  old_tse = AutoTest.CurrentExec
+  new_tse = TestSuiteExecution(description, body, old_tse.level+1, Set(tags...))
+  push!(old_tse.children, new_tse)
+  run_tests_from(new_tse)
+end
+
+VerbosityLevel = 1
 set_verbosity!(newLevel) = VerbosityLevel = newLevel
 
 # Print at verbosity level.
@@ -79,20 +97,19 @@ end
 # that are currently selected.
 should_run(tse) = length(tse.tags) == 0 || length(intersect(tse.tags, AutoTest.CurrentRunTags)) > 0
 
-# Note that the reference to the global var CurrentExec makes this 
-# hard/unparallelizable??! Investigate better approaches.
-function test(body, description = "", tags...)
-  old_tse = AutoTest.CurrentExec
-  new_tse = TestSuiteExecution(description, old_tse.level+1, Set(tags...))
-  push!(old_tse.children, new_tse)
-  leading = reps("-", old_tse.level)
-  printav(2, "\n", leading, description, "\n", reps(" ", old_tse.level))
-  if should_run(new_tse)
-    set_current_execution!(new_tse) do
-      body()
+rerun_tests_from_top() = run_tests_from(TopExec, true)
+
+run_tests_from(tse::TestSuiteExecution, clearStats = false) = begin
+  if clearStats
+    clear_statistics_for_new_execution(tse)
+  end
+  if should_run(tse)
+    printav(2, "\n", reps("-", tse.level), tse.description, "\n", reps(" ", tse.level))
+    set_current_execution!(tse) do
+      tse.body()
     end
   end
-  new_tse
+  tse
 end
 
 test_suite_report(tse = AutoTest.CurrentExec) = begin
@@ -152,6 +169,7 @@ macro t(ex)
   end
 end
 
+# Macro to check that exceptions are thrown.
 macro throws(ex)
   quote
     try
