@@ -33,6 +33,25 @@ end
 
 CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
 
+run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl") = begin
+  global TopExec
+  global CurrentExec
+
+  # Set a new top tse that the rest will be nested inside
+  CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
+
+  cb(filename) = include(filename) # When we include it all its test will be run
+  AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
+
+  # Set a new top exec so we don't pollute this one later.
+  test_exec, TopExec = TopExec, TestSuiteExecution("<top>", () -> (1))
+  CurrentExec = TopExec
+
+  stats = AutoTest.report_assertions(test_exec)
+
+  return test_exec, stats
+end
+
 clear_statistics_for_new_execution(tse::TestSuiteExecution) = begin
   clear_tse(tse) = begin
     tse.num_pass = tse.num_fail = tse.num_error = 0
@@ -51,11 +70,14 @@ function test(body, description = "", tags...)
 end
 
 VerbosityLevel = 1
-set_verbosity!(newLevel) = VerbosityLevel = newLevel
+set_verbosity!(newLevel) = begin
+  global VerbosityLevel
+  VerbosityLevel = newLevel
+end
 
 # Print at verbosity level.
 printav(level, args...) = begin
-  if level < VerbosityLevel
+  if level <= VerbosityLevel
     print(args...)
   end
 end
@@ -67,6 +89,7 @@ num_pass(s::TestSuiteExecution = AutoTest.CurrentExec) = s.num_pass + sum([num_p
 num_fail(s::TestSuiteExecution = AutoTest.CurrentExec) = s.num_fail + sum([num_fail(c) for c in s.children])
 num_error(s::TestSuiteExecution = AutoTest.CurrentExec) = s.num_error + sum([num_error(c) for c in s.children])
 num_checks(s::TestSuiteExecution = AutoTest.CurrentExec) = num_pass(s) + num_fail(s) + num_error(s)
+num_checks_without_recurse(tse::TestSuiteExecution) = tse.num_pass + tse.num_fail + tse.num_error
 
 # Traverse the tree of tests and callback on each one.
 each_test(callback, tse = AutoTest.CurrentExec) = begin
@@ -78,11 +101,11 @@ end
 
 # We only count tests that has been run and that contains at least one
 # assert/check, the other ones are used for hierarchy/organisation/reporting.
-num_tests(s::TestSuiteExecution = AutoTest.CurrentExec) = begin
+num_tests(tse::TestSuiteExecution = AutoTest.CurrentExec) = begin
   count = 0
-  count_if_has_checks(tse) = (num_checks(tse) > 0) ? (count += 1) : 0
-  each_test(count_if_has_checks)
-  count - 1 # Subtract one since we should not include <top>, which we created
+  count_if_has_checks(tse) = (num_checks_without_recurse(tse) > 0) ? (count += 1) : 0
+  each_test(count_if_has_checks, tse)
+  count
 end
 
 set_current_execution!(body, tse::TestSuiteExecution) = begin
@@ -113,14 +136,29 @@ run_tests_from(tse::TestSuiteExecution, clearStats = false) = begin
 end
 
 test_suite_report(tse = AutoTest.CurrentExec) = begin
-  (num_tests(), num_pass(tse), num_fail(tse), num_error(tse), time() - tse.start_time)
+  t = time()
+  {
+    "nt" => num_tests(tse), 
+    "np" => num_pass(tse), 
+    "nf" => num_fail(tse), 
+    "ne" => num_error(tse), 
+    "elt" => (t - tse.start_time),
+  }
 end
 
+pl(num, word) = join([num, " ", word, ((num > 1) ? "s" : "")])
+
 function report_assertions(tse = AutoTest.CurrentExec)
-  nt, np, nf, ne, t = test_suite_report(tse)
-  printav(1, "\n\nFinished in ", @sprintf("%.3f seconds", t))
-  printav(1, "\n", nt, " tests, ", np+nf+ne, " asserts, ", 
-    np, " passed, ", nf, " failed, ", ne, " errors.\n")
+  r = test_suite_report(tse)
+
+  printav(1, "\n\nFinished in ", @sprintf("%.3f seconds", r["elt"]), "\n")
+
+  printav(1, "\n", pl(r["nt"], "test"), ", ", 
+    pl(r["np"]+r["nf"]+r["ne"], "assert"), ", ",
+    r["np"], " passed, ", r["nf"], " failed, ", 
+    pl(r["ne"], "error"), ".\n")
+
+  r
 end
 
 function reps(str, len)
