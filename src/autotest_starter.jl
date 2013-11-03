@@ -91,8 +91,10 @@ start_autotesting(srcDir = "src", testDir = "test";
         rerun_count += 1
         println("\n", join(["=" for i in 1:78]))
         println(rerun_count, ": Rerunning tests")
-        println(rerun_count, ": File changed: ", join([fileChangeDir, filename], "/"))
+        filepath = join([fileChangeDir, filename], "/")
+        println(rerun_count, ": File changed: ", filepath)
         println(join(["=" for i in 1:78]))
+        include(filepath)
         run_all_tests_and_log_stats(testDir, log_test_executions; 
           changed_file = join([fileChangeDir, "/", filename]))
       end
