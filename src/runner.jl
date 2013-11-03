@@ -40,10 +40,10 @@ run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl$") 
   # Set a new top tse that the rest will be nested inside
   CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
 
-  println("testDir = ", testDir)
+  printav(4, "Running tests in dir: ", testDir)
 
   cb(filename) = begin
-    println("Loading test file ", filename)
+    printav(4, "Loading test file ", filename)
     include(filename) # When we include it all its test will be run
   end
   AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
@@ -208,6 +208,8 @@ macro t(ex)
       end
     catch e
       log_outcome(:error, e)
+      sp = reps(" ", AutoTest.CurrentExec.level-1)
+      printav(1, "\n", sp, "Error when checking assertion: ", $(string(ex)), "\n", sp, e, "\n", sp)
     end
   end
 end
