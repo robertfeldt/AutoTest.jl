@@ -33,7 +33,7 @@ end
 
 CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
 
-run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"test[^\/]*\.jl$") = begin
+run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl$") = begin
   global TopExec
   global CurrentExec
 

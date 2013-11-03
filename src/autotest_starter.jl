@@ -59,7 +59,7 @@ end
 
 run_all_tests_and_log_stats(testDir, log_test_executions = true;
   changed_file = false,
-  regexpThatShouldMatchTestFiles = r"test[^\/]*\.jl$") = begin
+  regexpThatShouldMatchTestFiles = r"^test.*\.jl$") = begin
 
   st = time()
   te, stats = run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles)
@@ -81,7 +81,7 @@ end
 start_autotesting(srcDir = "src", testDir = "test"; 
   fileendings = ["jl"],
   log_test_executions = true,
-  regexpThatShouldMatchTestFiles = r"^test.*\.jl") = begin
+  regexpThatShouldMatchTestFiles = r"^test.*\.jl$") = begin
 
   create_callback(fileChangeDir) = begin
     (filename, events, status) -> begin

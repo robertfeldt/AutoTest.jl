@@ -5,7 +5,7 @@ recurse_and_find_all_files_matching(callback, dir, regexp = r".*") = begin
     println(filepath)
     if isdir(filepath)
       recurse_and_find_all_files_matching(callback, filepath, regexp)
-    elseif ismatch(regexp, filepath)
+    elseif ismatch(regexp, file)
       println("cb!")
       callback(filepath)
     end
