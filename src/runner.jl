@@ -40,6 +40,8 @@ run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl") =
   # Set a new top tse that the rest will be nested inside
   CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
 
+  println("testDir = ", testDir)
+
   cb(filename) = include(filename) # When we include it all its test will be run
   AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
 
