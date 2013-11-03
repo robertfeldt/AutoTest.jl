@@ -156,7 +156,7 @@ pl(num, word) = join([num, " ", word, ((num > 1) ? "s" : "")])
 function report_assertions(tse = AutoTest.CurrentExec)
   r = test_suite_report(tse)
 
-  printav(1, "\n\nFinished in ", @sprintf("%.3f seconds", r["elt"]), "\n")
+  printav(1, "\nFinished in ", @sprintf("%.3f seconds", r["elt"]), "\n")
 
   printav(1, "\n", pl(r["nt"], "test"), ", ", 
     pl(r["np"]+r["nf"]+r["ne"], "assert"), ", ",
