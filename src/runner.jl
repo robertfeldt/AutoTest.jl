@@ -43,7 +43,7 @@ run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl") =
   println("testDir = ", testDir)
 
   cb(filename) = begin
-    printav(3, "Loading test file ", filename)
+    println("Loading test file ", filename)
     include(filename) # When we include it all its test will be run
   end
   AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
