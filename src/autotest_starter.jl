@@ -85,7 +85,7 @@ start_autotesting(srcDir = "src", testDir = "test";
 
   rerun_count = 0
 
-  create_callback(fileChangeDir) = begin
+  create_callback(fileChangeDir, testdir) = begin
     (filename, events, status) -> begin
       if in(file_ending(filename), fileendings)
         rerun_count += 1
@@ -94,7 +94,12 @@ start_autotesting(srcDir = "src", testDir = "test";
         filepath = join([fileChangeDir, filename], "/")
         println(rerun_count, ": File changed: ", filepath)
         println(join(["=" for i in 1:78]))
-        include(filepath)
+        if testdir != false
+          # We do not include if it is a test file since we will reload
+          # them below anyway... But for source files we must reload since
+          # it changed.
+          include(filepath)
+        end
         run_all_tests_and_log_stats(testDir, log_test_executions; 
           changed_file = join([fileChangeDir, "/", filename]))
       end
@@ -106,7 +111,7 @@ start_autotesting(srcDir = "src", testDir = "test";
    regexpThatShouldMatchTestFiles = regexpThatShouldMatchTestFiles)
 
   # Now install the file watchers and sit back and let the autotesting begin... :)
-  watch_file(create_callback(srcDir), srcDir)
-  watch_file(create_callback(testDir), testDir)
+  watch_file(create_callback(srcDir, false), srcDir)
+  watch_file(create_callback(testDir, true), testDir)
 end
 
