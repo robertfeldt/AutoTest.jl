@@ -86,7 +86,7 @@ start_autotesting(srcDir = "src", testDir = "test";
   create_callback(fileChangeDir) = begin
     (filename, events, status) -> begin
       if in(file_ending(filename), fileendings)
-        println(join(["=" for i in 1:78]))
+        println("\n", join(["=" for i in 1:78]))
         println(strftime("%X", time()), ", File changed: ", filename)
         println(strftime("%X", time()), ", Rerunning tests.")
         run_all_tests_and_log_stats(testDir, log_test_executions; 
