@@ -231,25 +231,35 @@ function log_outcome(outcome, error = nothing)
   end
 end
 
+# Safely return an arg of an Expr or fallback to returning nothing if it is not
+# an expression
+safearg(e::Expr, argnum) = (length(e.args) <= argnum) ? e.args[argnum] : nothing
+safearg(notexpr, argnum) = nothing
+safehead(e::Expr) = e.head
+safehead(notexpr) = nothing
+
 # Macro that checks if something is true (a pass), false (a fail) or if an
 # error/exception (an error) was thrown.
 macro t(ex)
   quote
     try
-      res = $(esc(ex))
+      local res = $(esc(ex))
+      local exception
       if res
         log_outcome(:pass)
         nothing
       else
         log_outcome(:fail)
-        sp = indents(AutoTest.CurrentExec) * " "
-        printav(1, "\n", sp, redb("Assertion failed: "), $(string(ex)), "\n")
-        printav(1, sp, " ", redb($(assertion_failure_report(ex))), "\n", sp)
+        local sp = indents(AutoTest.CurrentExec) * " "
+        printav(1, "\n", sp, redb("Assertion failed: "), $(format(ex)), "\n", "safehead = ", safehead($ex), "\n")
+        if safehead($ex) == :comparison
+          printav(1, sp, " ", redb(report_failed_comparison($ex, safearg($ex, 1), safearg($ex, 3))), "\n", sp)
+        end
       end
-    catch e
-      log_outcome(:error, e)
-      sp = indents(AutoTest.CurrentExec) * " "
-      printav(1, "\n", sp, red("Error when checking assertion: "), $(string(ex)), "\n", sp, e, "\n", sp)
+    catch exception
+      log_outcome(:error, exception)
+      local sp = indents(AutoTest.CurrentExec) * " "
+      printav(1, "\n", sp, red("Error when checking assertion: "), $(string(ex)), "\n", sp, exception, "\n", sp)
     end
   end
 end
