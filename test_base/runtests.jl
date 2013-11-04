@@ -11,6 +11,7 @@ my_tests = [
   "test_gen.jl",
   "test_runner.jl",
   "test_recurse_files.jl",
+  "test_assertion_failure_reporting.jl",
 
 ]
 
