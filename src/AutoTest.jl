@@ -9,6 +9,7 @@ module Utils
   include("utils/recurse_files.jl")
 end
 
+include("utils/color_print.jl")
 include("runner.jl")
 include("gen.jl")
 include("autotest_starter.jl")

@@ -187,27 +187,6 @@ test_suite_report(tse = AutoTest.CurrentExec) = begin
   }
 end
 
-# Coloring is based on FactCheck
-const RED     = "\x1b[31m"
-const GREEN   = "\x1b[32m"
-const BLUE    = "\x1b[34m"
-const BOLD    = "\x1b[1m"
-const DEFAULT = "\x1b[0m"
-const REDBOLD = "\x1b[31;1m"
-const GREENBOLD = "\x1b[32;1m"
-const BLUEBOLD = "\x1b[34;1m"
-
-colored(s, color) = string(color, string(s), DEFAULT)
-red(s)            = colored(string(s), RED)
-green(s)          = colored(string(s), GREEN)
-blue(s)           = colored(string(s), BLUE)
-bold(s)           = colored(string(s), BOLD)
-redb(s)           = colored(string(s), REDBOLD)
-greenb(s)         = colored(string(s), GREEBOLD)
-blueb(s)          = colored(string(s), BLUEBOLD)
-colorif(value, color, s::String, v = 0) = (value > v) ? colored(s, color) : string(s)
-colorif(value, color, a::Array{Any,1}, v = 0) = colorif(value, color, join([string(e) for e in a], ""), v)
-
 pl(num, word) = join([num, " ", word, ((num > 1) ? "s" : "")])
 
 function report(tse = AutoTest.CurrentExec)
@@ -219,7 +198,7 @@ function report(tse = AutoTest.CurrentExec)
     pl(r["nt"], "test"), ", ", 
     blue(pl(r["np"]+r["nf"]+r["ne"], "assert")), ", ",
     colorif(r["np"], GREEN, [r["np"], " passed"]), ", ", 
-    colorif(r["nf"], RED, [r["nf"], " failed"]), ", ", 
+    colorif(r["nf"], REDBOLD, [r["nf"], " failed"]), ", ", 
     colorif(r["ne"], RED, pl(r["ne"], "error")), 
     ".\n")
 
@@ -245,10 +224,10 @@ function log_outcome(outcome, error = nothing)
     mark_progress(".")
   elseif outcome == :fail
     AutoTest.CurrentExec.num_fail += 1
-    mark_progress("F")
+    mark_progress(redb("F"))
   elseif outcome == :error
     AutoTest.CurrentExec.num_error += 1
-    mark_progress("E")
+    mark_progress(red("E"))
   end
 end
 
@@ -263,12 +242,12 @@ macro t(ex)
         nothing
       else
         log_outcome(:fail)
-        sp = indents(AutoTest.CurrentExec)
-        printav(1, "\n", sp, red("Assertion failed: "), $(string(ex)), "\n", sp)
+        sp = indents(AutoTest.CurrentExec) * " "
+        printav(1, "\n", sp, redb("Assertion failed: "), $(string(ex)), "\n", sp)
       end
     catch e
       log_outcome(:error, e)
-      sp = indents(AutoTest.CurrentExec)
+      sp = indents(AutoTest.CurrentExec) * " "
       printav(1, "\n", sp, red("Error when checking assertion: "), $(string(ex)), "\n", sp, e, "\n", sp)
     end
   end
@@ -281,17 +260,11 @@ macro throws(ex)
       res = $(esc(ex))
       if res
         log_outcome(:fail)
-        sp = indents(AutoTest.CurrentExec)
-        printav(1, "\n", sp, red("Assertion failed: No exception was thrown"), $(string(ex)), "\n", sp)
+        sp = indents(AutoTest.CurrentExec) * " "
+        printav(1, "\n", sp, redb("Assertion failed: No exception was thrown"), $(string(ex)), "\n", sp)
       end
     catch e
-      #if typeof(e) == $error
-        log_outcome(:pass)
-      #else
-      #  log_outcome(:fail)
-      #  sp = reps(" ", AutoTest.CurrentExec.level-1)
-      #  printav(1, "\n", sp, "Assertion failed: an exception was thrown but not the right one", $(string(ex)), "\n", sp)
-      #end
+      log_outcome(:pass)
     end
   end
 end
