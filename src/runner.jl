@@ -50,26 +50,12 @@ execute_with_new_tse(body) = begin
   test_exec
 end
 
-run_tests_in_file(file) = begin
+function run_tests_in_file(file; verbosity = 1)
   tse = execute_with_new_tse() do
-    printav(4, "Loading test file ", file)
-    include(file)
-  end
-
-  stats = AutoTest.report(tse)
-
-  return tse, stats
-end
-
-run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl$") = begin
-  tse = execute_with_new_tse() do
-    printav(4, "Running tests in dir: ", testDir)
-
-    cb(filename) = begin
-      printav(4, "Loading test file ", filename)
-      include(filename) # When we include it all its test will be run
+    execute_with_verbosity(verbosity) do
+      printav(4, "Loading test file ", file)
+      include(file)
     end
-    AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
   end
 
   stats = AutoTest.report(tse)
@@ -77,7 +63,26 @@ run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl$") 
   return tse, stats
 end
 
-clear_statistics_for_new_execution(tse::TestSuiteExecution) = begin
+function run_all_tests_in_dir(testDir; verbosity = 1, 
+  regexpThatShouldMatchTestFiles = r"^test.*\.jl$")
+  tse = execute_with_new_tse() do
+    execute_with_verbosity(verbosity) do
+      printav(4, "Running tests in dir: ", testDir)
+
+      cb(filename) = begin
+        printav(4, "Loading test file ", filename)
+        include(filename) # When we include it all its test will be run
+      end
+      AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
+    end
+  end
+
+  stats = AutoTest.report(tse)
+
+  return tse, stats
+end
+
+function clear_statistics_for_new_execution(tse::TestSuiteExecution)
   clear_tse(tse) = begin
     tse.num_pass = tse.num_fail = tse.num_error = 0
   end
@@ -98,6 +103,15 @@ VerbosityLevel = 1
 set_verbosity!(newLevel) = begin
   global VerbosityLevel
   VerbosityLevel = newLevel
+end
+
+function execute_with_verbosity(block, level)
+  global VerbosityLevel
+  old_verbosity = VerbosityLevel
+  VerbosityLevel = level
+  result = block()
+  VerbosityLevel = old_verbosity
+  result
 end
 
 # Print at verbosity level.
