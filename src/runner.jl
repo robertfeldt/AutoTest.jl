@@ -152,7 +152,7 @@ run_tests_from(tse::TestSuiteExecution, clearStats = false) = begin
     clear_statistics_for_new_execution(tse)
   end
   if should_run(tse)
-    printav(2, "\n", reps("-", tse.level), tse.description, "\n", reps(" ", tse.level))
+    printav(2, "\n", reps(" ", tse.level), tse.description, " ")
     set_current_execution!(tse) do
       tse.body()
     end
