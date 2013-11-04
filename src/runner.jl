@@ -147,12 +147,14 @@ should_run(tse) = length(tse.tags) == 0 || length(intersect(tse.tags, AutoTest.C
 
 rerun_tests_from_top() = run_tests_from(TopExec, true)
 
+indents(tse::TestSuiteExecution) = reps(" ", max(0, tse.level-1))
+
 run_tests_from(tse::TestSuiteExecution, clearStats = false) = begin
   if clearStats
     clear_statistics_for_new_execution(tse)
   end
   if should_run(tse)
-    printav(2, "\n", reps(" ", tse.level), tse.description, " ")
+    printav(2, "\n", indents(tse), tse.description, " ")
     set_current_execution!(tse) do
       tse.body()
     end
@@ -193,7 +195,7 @@ end
 function mark_progress(char)
   if CurrentExec.next_column == 78
     CurrentExec.next_column = 0
-    printav(2, reps(" ", CurrentExec.level))
+    printav(2, indents(CurrentExec))
   end
   printav(2, char)
   CurrentExec.next_column += 1
@@ -223,12 +225,12 @@ macro t(ex)
         nothing
       else
         log_outcome(:fail)
-        sp = reps(" ", AutoTest.CurrentExec.level-1)
+        sp = indents(AutoTest.CurrentExec)
         printav(1, "\n", sp, "Assertion failed: ", $(string(ex)), "\n", sp)
       end
     catch e
       log_outcome(:error, e)
-      sp = reps(" ", AutoTest.CurrentExec.level-1)
+      sp = indents(AutoTest.CurrentExec)
       printav(1, "\n", sp, "Error when checking assertion: ", $(string(ex)), "\n", sp, e, "\n", sp)
     end
   end
@@ -241,7 +243,7 @@ macro throws(ex)
       res = $(esc(ex))
       if res
         log_outcome(:fail)
-        sp = reps(" ", AutoTest.CurrentExec.level-1)
+        sp = indents(AutoTest.CurrentExec)
         printav(1, "\n", sp, "Assertion failed: No exception was thrown", $(string(ex)), "\n", sp)
       end
     catch e
