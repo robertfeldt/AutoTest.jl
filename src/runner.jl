@@ -195,8 +195,8 @@ function report(tse = AutoTest.CurrentExec)
   printav(1, "\n\nFinished in ", @sprintf("%.3f seconds", r["elt"]), "\n")
 
   printav(1, "\n", 
-    pl(r["nt"], "test"), ", ", 
-    blue(pl(r["np"]+r["nf"]+r["ne"], "assert")), ", ",
+    blue(pl(r["nt"], "test")), ", ", 
+    pl(r["np"]+r["nf"]+r["ne"], "assert"), ", ",
     annotateif(r["np"] > 0, GREEN, [r["np"], " passed"]), ", ", 
     annotateif(r["nf"] > 0, REDBOLD, [r["nf"], " failed"]), ", ", 
     annotateif(r["ne"] > 0, RED, pl(r["ne"], "error")), 
