@@ -59,10 +59,10 @@ end
 
 run_all_tests_and_log_stats(testDir, log_test_executions = true;
   changed_file = false,
-  regexpThatShouldMatchTestFiles = r"^test.*\.jl$") = begin
+  regexpTestFiles = r"^test.*\.jl$") = begin
 
   st = time()
-  te, stats = run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles)
+  te, stats = run_all_tests_in_dir(testDir, regexpTestFiles)
 
   if log_test_executions
     #println("Logging test exec stats.")
@@ -81,7 +81,7 @@ end
 start_autotesting(srcDir = "src", testDir = "test"; 
   fileendings = ["jl"],
   log_test_executions = true,
-  regexpThatShouldMatchTestFiles = r"^test.*\.jl$") = begin
+  regexpTestFiles = r"^test.*\.jl$") = begin
 
   rerun_count = 0
 
@@ -108,7 +108,7 @@ start_autotesting(srcDir = "src", testDir = "test";
 
   # Run the tests once to ensure the tests have been loaded.
   run_all_tests_and_log_stats(testDir, log_test_executions;
-   regexpThatShouldMatchTestFiles = regexpThatShouldMatchTestFiles)
+   regexpTestFiles = regexpTestFiles)
 
   # Now install the file watchers and sit back and let the autotesting begin... :)
   watch_file(create_callback(srcDir, false), srcDir)

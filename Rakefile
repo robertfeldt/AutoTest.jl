@@ -9,7 +9,7 @@ def runtestfile(filename)
 end
 
 task :runbasetest do
-  runtestfile "test/runbasetests.jl"
+  runtestfile "test_base/runtests.jl"
 end
 
 task :runtest do
@@ -17,10 +17,8 @@ task :runtest do
 end
 
 task :runselftest do
-  sh "julia -L #{MainFile} -L test/helper.jl -e 'AutoTest.run_all_tests_in_dir(\"test/selftest\")'"
+  sh "julia -L #{MainFile} -L test/helper.jl -e 'AutoTest.run_all_tests_in_dir(\"test\"; verbosity = 2)'"
 end
-
-task :runalltest => [:runbasetest, :runtest, :runselftest]
 
 def filter_latest_changed_files(filenames, numLatestChangedToInclude = 1)
   filenames.sort_by{ |f| File.mtime(f) }[-numLatestChangedToInclude, numLatestChangedToInclude]
@@ -29,9 +27,8 @@ end
 desc "Run only the latest changed test file"
 task :t do
   latest_changed_test_file = filter_latest_changed_files Dir["test/**/test*.jl"]
-  sh "julia -L #{MainFile} -L test/helper.jl -e 'AutoTest.run_tests_in_file(\"#{latest_changed_test_file.first}\")'"
+  sh "julia -L #{MainFile} -L test/helper.jl -e 'AutoTest.run_tests_in_file(\"#{latest_changed_test_file.first}\"; verbosity = 2)'"
 end
 
-task :at => :runalltest
-
-task :default => :runalltest
+task :at => :runtest
+task :default => :runtest

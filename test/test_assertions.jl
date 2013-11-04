@@ -1,4 +1,4 @@
-test("Assertions that helps in writing checks and tests") do
+test("Assertions and funcs that help in writing checks") do
 
   test("in_delta") do
 

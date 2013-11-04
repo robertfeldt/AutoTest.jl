@@ -50,7 +50,7 @@ execute_with_new_tse(body) = begin
   test_exec
 end
 
-function run_tests_in_file(file; verbosity = 1)
+function run_tests_in_file(file; verbosity = 2)
   tse = execute_with_new_tse() do
     execute_with_verbosity(verbosity) do
       printav(4, "Loading test file ", file)
@@ -63,8 +63,8 @@ function run_tests_in_file(file; verbosity = 1)
   return tse, stats
 end
 
-function run_all_tests_in_dir(testDir; verbosity = 1, 
-  regexpThatShouldMatchTestFiles = r"^test.*\.jl$")
+function run_all_tests_in_dir(testDir; verbosity = 2,
+  regexpTestFiles = r"^test.*\.jl$")
   tse = execute_with_new_tse() do
     execute_with_verbosity(verbosity) do
       printav(4, "Running tests in dir: ", testDir)
@@ -73,7 +73,7 @@ function run_all_tests_in_dir(testDir; verbosity = 1,
         printav(4, "Loading test file ", filename)
         include(filename) # When we include it all its test will be run
       end
-      AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
+      AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpTestFiles)
     end
   end
 
@@ -99,7 +99,7 @@ function test(body, description = "", tags...)
   run_tests_from(new_tse)
 end
 
-VerbosityLevel = 1
+VerbosityLevel = 2
 set_verbosity!(newLevel) = begin
   global VerbosityLevel
   VerbosityLevel = newLevel
@@ -168,7 +168,7 @@ run_tests_from(tse::TestSuiteExecution, clearStats = false) = begin
     clear_statistics_for_new_execution(tse)
   end
   if should_run(tse)
-    printav(2, "\n", indents(tse), tse.description, " ")
+    printav(2, "\n", indents(tse), blue(tse.description), " ")
     set_current_execution!(tse) do
       tse.body()
     end
@@ -187,17 +187,41 @@ test_suite_report(tse = AutoTest.CurrentExec) = begin
   }
 end
 
+# Coloring is based on FactCheck
+const RED     = "\x1b[31m"
+const GREEN   = "\x1b[32m"
+const BLUE    = "\x1b[34m"
+const BOLD    = "\x1b[1m"
+const DEFAULT = "\x1b[0m"
+const REDBOLD = "\x1b[31;1m"
+const GREENBOLD = "\x1b[32;1m"
+const BLUEBOLD = "\x1b[34;1m"
+
+colored(s, color) = string(color, string(s), DEFAULT)
+red(s)            = colored(string(s), RED)
+green(s)          = colored(string(s), GREEN)
+blue(s)           = colored(string(s), BLUE)
+bold(s)           = colored(string(s), BOLD)
+redb(s)           = colored(string(s), REDBOLD)
+greenb(s)         = colored(string(s), GREEBOLD)
+blueb(s)          = colored(string(s), BLUEBOLD)
+colorif(value, color, s::String, v = 0) = (value > v) ? colored(s, color) : string(s)
+colorif(value, color, a::Array{Any,1}, v = 0) = colorif(value, color, join([string(e) for e in a], ""), v)
+
 pl(num, word) = join([num, " ", word, ((num > 1) ? "s" : "")])
 
 function report(tse = AutoTest.CurrentExec)
   r = test_suite_report(tse)
 
-  printav(1, "\nFinished in ", @sprintf("%.3f seconds", r["elt"]), "\n")
+  printav(1, "\n\nFinished in ", @sprintf("%.3f seconds", r["elt"]), "\n")
 
-  printav(1, "\n", pl(r["nt"], "test"), ", ", 
-    pl(r["np"]+r["nf"]+r["ne"], "assert"), ", ",
-    r["np"], " passed, ", r["nf"], " failed, ", 
-    pl(r["ne"], "error"), ".\n")
+  printav(1, "\n", 
+    pl(r["nt"], "test"), ", ", 
+    blue(pl(r["np"]+r["nf"]+r["ne"], "assert")), ", ",
+    colorif(r["np"], GREEN, [r["np"], " passed"]), ", ", 
+    colorif(r["nf"], RED, [r["nf"], " failed"]), ", ", 
+    colorif(r["ne"], RED, pl(r["ne"], "error")), 
+    ".\n")
 
   r
 end
@@ -240,12 +264,12 @@ macro t(ex)
       else
         log_outcome(:fail)
         sp = indents(AutoTest.CurrentExec)
-        printav(1, "\n", sp, "Assertion failed: ", $(string(ex)), "\n", sp)
+        printav(1, "\n", sp, red("Assertion failed: "), $(string(ex)), "\n", sp)
       end
     catch e
       log_outcome(:error, e)
       sp = indents(AutoTest.CurrentExec)
-      printav(1, "\n", sp, "Error when checking assertion: ", $(string(ex)), "\n", sp, e, "\n", sp)
+      printav(1, "\n", sp, red("Error when checking assertion: "), $(string(ex)), "\n", sp, e, "\n", sp)
     end
   end
 end
@@ -258,7 +282,7 @@ macro throws(ex)
       if res
         log_outcome(:fail)
         sp = indents(AutoTest.CurrentExec)
-        printav(1, "\n", sp, "Assertion failed: No exception was thrown", $(string(ex)), "\n", sp)
+        printav(1, "\n", sp, red("Assertion failed: No exception was thrown"), $(string(ex)), "\n", sp)
       end
     catch e
       #if typeof(e) == $error
