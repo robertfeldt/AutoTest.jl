@@ -11,6 +11,7 @@ end
 
 include("utils/color_print.jl")
 include("runner.jl")
+include("assertion_failure_reporting.jl")
 include("gen.jl")
 include("autotest_starter.jl")
 include("assertions.jl")

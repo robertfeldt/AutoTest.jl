@@ -243,7 +243,8 @@ macro t(ex)
       else
         log_outcome(:fail)
         sp = indents(AutoTest.CurrentExec) * " "
-        printav(1, "\n", sp, redb("Assertion failed: "), $(string(ex)), "\n", sp)
+        printav(1, "\n", sp, redb("Assertion failed: "), $(string(ex)), "\n")
+        printav(1, sp, " ", redb(assertion_failure_report(ex)), "\n", sp)
       end
     catch e
       log_outcome(:error, e)
