@@ -62,27 +62,19 @@ run_tests_in_file(file) = begin
 end
 
 run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl$") = begin
-  global TopExec
-  global CurrentExec
+  tse = execute_with_new_tse() do
+    printav(4, "Running tests in dir: ", testDir)
 
-  # Set a new top tse that the rest will be nested inside
-  CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
-
-  printav(4, "Running tests in dir: ", testDir)
-
-  cb(filename) = begin
-    printav(4, "Loading test file ", filename)
-    include(filename) # When we include it all its test will be run
+    cb(filename) = begin
+      printav(4, "Loading test file ", filename)
+      include(filename) # When we include it all its test will be run
+    end
+    AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
   end
-  AutoTest.Utils.recurse_and_find_all_files_matching(cb, testDir, regexpThatShouldMatchTestFiles)
 
-  # Set a new top exec so we don't pollute this one later.
-  test_exec, TopExec = TopExec, TestSuiteExecution("<top>", () -> (1))
-  CurrentExec = TopExec
+  stats = AutoTest.report(tse)
 
-  stats = AutoTest.report(test_exec)
-
-  return test_exec, stats
+  return tse, stats
 end
 
 clear_statistics_for_new_execution(tse::TestSuiteExecution) = begin

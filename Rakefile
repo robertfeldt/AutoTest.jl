@@ -21,7 +21,7 @@ task :runslowtest do
 end
 
 task :runselftest do
-  runtestfile "test/selftest/runtests.jl"
+  sh "julia -L #{MainFile} -L test/helper.jl -e 'AutoTest.run_all_tests_in_dir(\"test/selftest\")'"
 end
 
 task :runalltest => [:runbasetest, :runtest, :runslowtest, :runselftest]
@@ -32,8 +32,8 @@ end
 
 desc "Run only the latest changed test file"
 task :t do
-  latest_changed_test_file = filter_latest_changed_files Dir["test/test*.jl"]
-  sh "julia -L #{MainFile} -L test/helper.jl #{latest_changed_test_file.first}"
+  latest_changed_test_file = filter_latest_changed_files Dir["test/**/test*.jl"]
+  sh "julia -L #{MainFile} -L test/helper.jl -e 'AutoTest.run_tests_in_file(\"#{latest_changed_test_file.first}\")'"
 end
 
 task :at => :runalltest
