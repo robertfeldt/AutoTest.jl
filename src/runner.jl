@@ -33,6 +33,34 @@ end
 
 CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
 
+# Execute a block of code with a new/unique CurrentExec and TopExec installed.
+execute_with_new_tse(body) = begin
+  global TopExec
+  global CurrentExec
+
+  # Set a new top tse that the rest will be nested inside
+  CurrentExec = TopExec = TestSuiteExecution("<top>", () -> (1))
+
+  body()
+
+  # Set a new top exec so we don't pollute this one later.
+  test_exec, TopExec = TopExec, TestSuiteExecution("<top>", () -> (1))
+  CurrentExec = TopExec  
+
+  test_exec
+end
+
+run_tests_in_file(file) = begin
+  tse = execute_with_new_tse() do
+    printav(4, "Loading test file ", file)
+    include(file)
+  end
+
+  stats = AutoTest.report(tse)
+
+  return tse, stats
+end
+
 run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl$") = begin
   global TopExec
   global CurrentExec
@@ -52,7 +80,7 @@ run_all_tests_in_dir(testDir, regexpThatShouldMatchTestFiles = r"^test.*\.jl$") 
   test_exec, TopExec = TopExec, TestSuiteExecution("<top>", () -> (1))
   CurrentExec = TopExec
 
-  stats = AutoTest.report_assertions(test_exec)
+  stats = AutoTest.report(test_exec)
 
   return test_exec, stats
 end
@@ -153,7 +181,7 @@ end
 
 pl(num, word) = join([num, " ", word, ((num > 1) ? "s" : "")])
 
-function report_assertions(tse = AutoTest.CurrentExec)
+function report(tse = AutoTest.CurrentExec)
   r = test_suite_report(tse)
 
   printav(1, "\nFinished in ", @sprintf("%.3f seconds", r["elt"]), "\n")
