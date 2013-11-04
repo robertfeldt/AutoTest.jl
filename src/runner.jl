@@ -197,9 +197,9 @@ function report(tse = AutoTest.CurrentExec)
   printav(1, "\n", 
     pl(r["nt"], "test"), ", ", 
     blue(pl(r["np"]+r["nf"]+r["ne"], "assert")), ", ",
-    colorif(r["np"], GREEN, [r["np"], " passed"]), ", ", 
-    colorif(r["nf"], REDBOLD, [r["nf"], " failed"]), ", ", 
-    colorif(r["ne"], RED, pl(r["ne"], "error")), 
+    annotateif(r["np"] > 0, GREEN, [r["np"], " passed"]), ", ", 
+    annotateif(r["nf"] > 0, REDBOLD, [r["nf"], " failed"]), ", ", 
+    annotateif(r["ne"] > 0, RED, pl(r["ne"], "error")), 
     ".\n")
 
   r
