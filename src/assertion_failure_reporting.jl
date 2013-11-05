@@ -8,7 +8,7 @@ function report_failed_comparison(comparisonstr, showlhs, showrhs)
   elseif length(showlhs) > 0 || length(showrhs) > 0
     spec = join(["\n but ", showlhs, showrhs])
   else
-    spec = " which is NOT true"
+    spec = " to be true (which it is NOT!!)"
   end
 
   join(["Expected ", comparisonstr, spec])
@@ -57,7 +57,8 @@ macro asrt(ex)
     extype = :unknown
     # All variables need to be have values for the quoted expression below
     # to compile! We set a dummy value.
-    assertion_str = frhs = flhs = rhs = lhs = nothing
+    frhs = flhs = rhs = lhs = nothing
+    assertion_str = join(["Expected ", format(ex), " to be true (which it is NOT!!)"])
   end
 
   quote
@@ -75,7 +76,7 @@ macro asrt(ex)
         showrhs = show_if_differ($frhs, string(vrhs))
         (:fail, report_failed_comparison($assertion_str, showlhs, showrhs))
       else
-        (:fail, :unknown)
+        (:fail, $assertion_str)
       end
     elseif typeof(res) <: Exception
       (:error, "error")
