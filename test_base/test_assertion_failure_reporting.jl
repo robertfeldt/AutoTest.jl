@@ -90,6 +90,10 @@ facts("Reporting failed comparison") do
     @fact r[1] => :error
     @fact typeof(r[2]) => ArgumentError
 
+    r = @asrt(1 == exc(1))
+    @fact r[1] => :error
+    @fact typeof(r[2]) => ArgumentError
+
   end
 
   context("report failed comparison") do
