@@ -83,6 +83,13 @@ facts("Reporting failed comparison") do
     @fact( @asrt(b == a) => (:fail, "Expected b == a\n but b was \"1\", and\n     a was 1") )
     @fact( @asrt(a == b) => (:fail, "Expected a == b\n but a was 1, and\n     b was \"1\"") )
 
+    exc(x) = begin
+      throw(ArgumentError("a"))
+    end
+    r = @asrt(exc(1) == b)
+    @fact r[1] => :error
+    @fact typeof(r[2]) => ArgumentError
+
   end
 
   context("report failed comparison") do

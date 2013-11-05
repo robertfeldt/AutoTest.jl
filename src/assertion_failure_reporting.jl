@@ -42,6 +42,8 @@ function format(d)
   end
 end
 
+indent_report(rep, spaces) = replace(rep, "\n", ("\n" * spaces))
+
 macro asrt(ex)
   local extype, lhs, rhs, comparator, assertion_str, flhs, frhs, showlhs, showrhs, exception
 
@@ -66,8 +68,7 @@ macro asrt(ex)
     try
       res = $(esc(ex)) # $(@safeesceval(ex))
     catch exception
-      res = :error
-      return (:error, exception)
+      res = exception
     end
     if res == true
       (:pass, nothing)
@@ -80,7 +81,9 @@ macro asrt(ex)
         local vrhs = $(esc(rhs))
         showlhs = show_if_differ($flhs, format(vlhs))
         showrhs = show_if_differ($frhs, format(vrhs))
-        (:fail, report_failed_comparison($assertion_str, showlhs, showrhs))
+        local sp = indents(AutoTest.CurrentExec) * " "
+        local rep = report_failed_comparison($assertion_str, showlhs, showrhs)
+        (:fail, rep)
       else
         (:fail, $assertion_str)
       end
