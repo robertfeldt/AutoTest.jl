@@ -78,8 +78,8 @@ macro asrt(ex)
         # an exception.
         local vlhs = $(esc(lhs))
         local vrhs = $(esc(rhs))
-        showlhs = show_if_differ($flhs, string(vlhs))
-        showrhs = show_if_differ($frhs, string(vrhs))
+        showlhs = show_if_differ($flhs, format(vlhs))
+        showrhs = show_if_differ($frhs, format(vrhs))
         (:fail, report_failed_comparison($assertion_str, showlhs, showrhs))
       else
         (:fail, $assertion_str)
