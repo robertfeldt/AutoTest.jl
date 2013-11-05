@@ -31,4 +31,5 @@ task :t do
 end
 
 task :at => :runtest
+task :bt => :runbasetest
 task :default => :runtest

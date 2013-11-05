@@ -233,7 +233,7 @@ end
 
 # Safely return an arg of an Expr or fallback to returning nothing if it is not
 # an expression
-safearg(e::Expr, argnum) = (length(e.args) <= argnum) ? e.args[argnum] : nothing
+safearg(e::Expr, argnum) = (argnum <= length(e.args)) ? e.args[argnum] : nothing
 safearg(notexpr, argnum) = nothing
 safehead(e::Expr) = e.head
 safehead(notexpr) = nothing
@@ -242,25 +242,30 @@ safehead(notexpr) = nothing
 # error/exception (an error) was thrown.
 macro t(ex)
   quote
-    try
-      local res = $(esc(ex))
-      local exception
+    #local sp = indents(AutoTest.CurrentExec) * " "
+    #try
+      res = $(esc(ex))
       if res
-        log_outcome(:pass)
+        #log_outcome(:pass)
         nothing
       else
-        log_outcome(:fail)
-        local sp = indents(AutoTest.CurrentExec) * " "
-        printav(1, "\n", sp, redb("Assertion failed: "), $(format(ex)), "\n", "safehead = ", safehead($ex), "\n")
-        if safehead($ex) == :comparison
-          printav(1, sp, " ", redb(report_failed_comparison($ex, safearg($ex, 1), safearg($ex, 3))), "\n", sp)
+        #log_outcome(:fail)
+        #printav(1, "\n", sp, redb("Assertion failed: "), $(format(ex)), "\n")
+        if $(typeof(ex)) == Expr && $(safehead(ex) == :comparison)
+          #println(1)
+          #printav(1, sp, " ", redb(report_failed_comparison($ex, $(esc(safearg(ex, 1))), $(esc(safearg(ex, 3))))), "\n", sp)
+          repo($ex, $(esc(safearg(ex, 1))), $(esc(safearg(ex, 3))))
+          #println(2)
+        else
+          #printav(0, "HERE WE ARE!", $(string(ex), "\n"))
         end
       end
-    catch exception
-      log_outcome(:error, exception)
-      local sp = indents(AutoTest.CurrentExec) * " "
-      printav(1, "\n", sp, red("Error when checking assertion: "), $(string(ex)), "\n", sp, exception, "\n", sp)
-    end
+    #catch exception
+      #printav(0, "ERROR! ", string(exception), "\n")
+      #log_outcome(:error, exception)
+      # local sp = indents(AutoTest.CurrentExec) * " "
+      #printav(1, "\n", sp, red("Error when checking assertion: "), $(format(ex)), "\n", sp, exception, "\n", sp)
+    #end
   end
 end
 

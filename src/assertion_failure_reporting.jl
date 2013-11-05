@@ -1,25 +1,32 @@
-# Given a comparison expression that do not evaluate to true, produce a 
-# human readable report describing it.
-function report_failed_comparison(e, lhs, rhs)
-  showlhs = show_value_if_differ(e.args[1], lhs)
-  showrhs = show_value_if_differ(e.args[3], rhs)
-
-  if length(showlhs) > 0 && length(showrhs) > 0
-    spec = join(["\n     but ", showlhs, "\n", "      and ", showrhs, "\n"])
-  elseif length(showlhs) > 0 || length(showrhs) > 0
-    spec = join(["\n     but ", showlhs, showrhs, "\n"])
-  else
-    spec = "!!!\n"
-  end
-
-  join(["Expected ", 
-    format(e.args[1]), " ", format(e.args[2]), " ", format(e.args[3]), 
-    spec])
+function show_if_differ(f1, f2, inbetween = " was ")
+  (f1 == f2) ? "" : join([f1, inbetween, f2])
 end
 
-function show_value_if_differ(v1, v2, inbetween = " was ")
-  f1, f2 = format(v1), format(v2)
-  (f1 == f2) ? "" : join([f1, inbetween, f2])
+function report_failed_comparison(comparisonstr, showlhs, showrhs)
+  if length(showlhs) > 0 && length(showrhs) > 0
+    spec = join(["\n but ", showlhs, ", and\n     ", showrhs])
+  elseif length(showlhs) > 0 || length(showrhs) > 0
+    spec = join(["\n but ", showlhs, showrhs])
+  else
+    spec = " which is NOT true"
+  end
+
+  join(["Expected ", comparisonstr, spec])
+end
+
+# Safe evaluation of an expression in the calling context. Catches any
+# exceptions and returns them. If no exception then returns the results
+# of the evaluation, otherwise return the exception.
+# expression
+macro safeesceval(ex)
+  quote
+    local exception
+    try
+      $(esc(ex))
+    catch exception
+      exception
+    end
+  end
 end
 
 isexpr(d) = typeof(d) == Expr
@@ -32,5 +39,46 @@ function format(d)
       string(d)[3:end-1]
   else
     string(d)
+  end
+end
+
+macro asrt(ex)
+  local extype, lhs, rhs, comparator, assertion_str, flhs, frhs, showlhs, showrhs, res
+
+  if typeof(ex) == Expr && ex.head == :comparison
+    extype = :comparison
+    lhs = ex.args[1]
+    comparator = ex.args[2]
+    rhs = ex.args[3]
+    flhs = format(lhs)
+    frhs = format(rhs)
+    assertion_str = join([flhs, " ", format(comparator), " ", frhs])
+  else
+    extype = :unknown
+    # All variables need to be have values for the quoted expression below
+    # to compile! We set a dummy value.
+    assertion_str = frhs = flhs = rhs = lhs = nothing
+  end
+
+  quote
+    res = @safeesceval($ex)
+    if res == true
+      (:pass, nothing)
+    elseif res == false
+      if $(extype == :comparison)
+        # We do NOT need to safeeval since these parts of the expr above
+        # has already been evaluated and we would not come here if they raised
+        # an exception.
+        local vlhs = $(esc(lhs))
+        local vrhs = $(esc(rhs))
+        showlhs = show_if_differ($flhs, string(vlhs))
+        showrhs = show_if_differ($frhs, string(vrhs))
+        (:fail, report_failed_comparison($assertion_str, showlhs, showrhs))
+      else
+        (:fail, :unknown)
+      end
+    elseif typeof(res) <: Exception
+      (:error, "error")
+    end
   end
 end
