@@ -70,6 +70,14 @@ facts("Reporting failed comparison") do
     @fact( @asrt(a == 2) => (:fail, "Expected a == 2\n but a was 1") )
     @fact( @asrt(2 == a) => (:fail, "Expected 2 == a\n but a was 1") )
 
+    b = 1
+    @fact( @asrt(b == a) => (:pass, nothing) )
+    @fact( @asrt(a == b) => (:pass, nothing) )
+
+    b = 10
+    @fact( @asrt(b == a) => (:fail, "Expected b == a\n but b was 10, and\n     a was 1") )
+    @fact( @asrt(a == b) => (:fail, "Expected a == b\n but a was 1, and\n     b was 10") )
+
   end
 
   context("report failed comparison") do
