@@ -43,7 +43,7 @@ function format(d)
 end
 
 macro asrt(ex)
-  local extype, lhs, rhs, comparator, assertion_str, flhs, frhs, showlhs, showrhs, res
+  local extype, lhs, rhs, comparator, assertion_str, flhs, frhs, showlhs, showrhs, exception
 
   if typeof(ex) == Expr && ex.head == :comparison
     extype = :comparison
@@ -62,7 +62,13 @@ macro asrt(ex)
   end
 
   quote
-    res = @safeesceval($ex)
+    local res = nothing
+    try
+      res = $(esc(ex)) # $(@safeesceval(ex))
+    catch exception
+      res = :error
+      return (:error, exception)
+    end
     if res == true
       (:pass, nothing)
     elseif res == false
@@ -78,8 +84,8 @@ macro asrt(ex)
       else
         (:fail, $assertion_str)
       end
-    elseif typeof(res) <: Exception
-      (:error, "error")
+    else
+      (:error, res)
     end
   end
 end

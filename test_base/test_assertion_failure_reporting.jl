@@ -54,9 +54,15 @@ facts("Reporting failed comparison") do
 
     @fact( @asrt(1 < 0) => (:fail, "Expected 1 < 0 to be true (which it is NOT!!)") )
 
+    @fact( @asrt(false) => (:fail, "Expected false to be true (which it is NOT!!)") )
+
     @fact( @asrt(isapprox(1.0, 2.0)) => (:fail, "Expected isapprox(1.0,2.0) to be true (which it is NOT!!)") )
 
-    @fact( @asrt(false) => (:fail, "Expected false to be true (which it is NOT!!)") )
+    f(x) = x
+    @fact( @asrt(f(1) == f(1)) => (:pass, nothing) )
+
+    #@fact( @asrt(f(2) == f(1)) => (:pass, nothing) )
+
   end
 
   context("report failed comparison") do
