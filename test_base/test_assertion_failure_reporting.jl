@@ -61,7 +61,7 @@ facts("Reporting failed comparison") do
     f(x) = x
     @fact( @asrt(f(1) == f(1)) => (:pass, nothing) )
 
-    #@fact( @asrt(f(2) == f(1)) => (:pass, nothing) )
+    @fact( @asrt(f(2) == f(1)) => (:fail, "Expected f(2) == f(1)\n but f(2) was 2, and\n     f(1) was 1") )
 
   end
 
