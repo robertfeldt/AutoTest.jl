@@ -24,7 +24,7 @@ function varvaluesmap(varnames)
     :($(syms[vi]) = $(esc(varnames[vi])))
   end
   blstmt = Expr(:block, assignments...)
-  push!(blstmt.args, :(return Dict($varnames, [$(syms...)])))
+  push!(blstmt.args, :(Dict($varnames, [$(syms...)])))
   blstmt
 end
 
